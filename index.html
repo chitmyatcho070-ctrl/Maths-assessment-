@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>Pre-KG & K1 Touch Math Assessment</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+
+* {
+    font-family: 'Fredoka', cursive, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg, #e0f2fe 0%, #fae8ff 50%, #fef3c7 100%);
+    min-height: 100vh;
+    touch-action: manipulation;
+}
+
+button {
+    cursor: pointer;
+}
+
+.bounce-tap:active {
+    transform: scale(0.93);
+}
+
+.card-shadow {
+    box-shadow:
+        0 10px 25px -5px rgba(0,0,0,.08),
+        0 8px 10px -6px rgba(0,0,0,.05);
+}
+
+.draw-canvas {
+    touch-action: none !important;
+    cursor: crosshair;
+}
+
+.count-item {
+    transition: all .2s cubic-bezier(.34,1.56,.64,1);
+}
+
+.count-item.counted {
+    transform: scale(1.18) rotate(5deg);
+    filter: drop-shadow(0 0 10px rgba(245,158,11,.55));
+}
+
+.selected {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 4px rgba(99,102,241,.25);
+}
+
+.correct {
+    border-color: #22c55e !important;
+    background: #dcfce7 !important;
+    color: #166534 !important;
+}
+
+.wrong {
+    border-color: #f87171 !important;
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+.written {
+    background: #dcfce7 !important;
+    border-color: #22c55e !important;
+    color: #166534 !important;
+}
+
+@keyframes pulse-soft {
+    0%,100% { transform:scale(1); }
+    50% { transform:scale(1.03); }
+}
+
+.pulse-card {
+    animation: pulse-soft 3s infinite ease-in-out;
+}
+
+@keyframes pop {
+    0% { transform:scale(.5); opacity:0; }
+    70% { transform:scale(1.15); opacity:1; }
+    100% { transform:scale(1); }
+}
+
+.pop {
+    animation: pop .35s ease-out;
+}
+
+@keyframes shake {
+    0%,100% { transform:translateX(0); }
+    25% { transform:translateX(-5px); }
+    75% { transform:translateX(5px); }
+}
+
+.shake {
+    animation: shake .3s ease;
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 25px;
+    transform: translateX(-50%);
+    z-index: 9999;
+    background: #1e293b;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 16px;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0,0,0,.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+@media(max-width:640px) {
+    .draw-box {
+        height: 145px;
+    }
+}
+</style>
+</head>
+
+<body class="p-3 sm:p-6 text-slate-800">
+
+<div class="max-w-4xl mx-auto w-full">
+
+<!-- HEADER -->
+<header class="bg-white/90 backdrop-blur-md rounded-3xl p-4 sm:p-6 mb-6 card-shadow border-4 border-indigo-200">
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+
+        <div class="flex items-center gap-4">
+            <div class="bg-indigo-500 text-white p-3 sm:p-4 rounded-2xl text-2xl sm:text-3xl shadow-md">
+                ✏️
+            </div>
+
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold text-indigo-950 leading-tight">
+                    Interactive Math Placement Assessment
+                </h1>
+
+                <p class="text-xs sm:text-sm font-semibold text-indigo-500">
+                    Touch & Finger Writing Readiness • Ages 3–5
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+
+            <button
+                onclick="copyShareableLink()"
+                class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border-2 border-indigo-300 font-bold px-4 py-2 rounded-2xl text-xs sm:text-sm bounce-tap">
+                🔗 Share
+            </button>
+
+            <button
+                onclick="resetAssessment()"
+                class="bg-amber-100 hover:bg-amber-200 text-amber-800 border-2 border-amber-300 font-bold px-3 py-2 rounded-2xl text-xs sm:text-sm bounce-tap">
+                🔄 Reset
+            </button>
+
+        </div>
+    </div>
+</header>
+
+
+<!-- PROGRESS -->
+<div class="mb-6 bg-white/80 backdrop-blur-sm rounded-2xl p-4 card-shadow border-2 border-indigo-100">
+
+    <div class="flex justify-between items-center mb-2">
+
+        <span
+            id="sectionProgressText"
+            class="text-xs sm:text-sm font-bold text-indigo-600 uppercase tracking-wider">
+            Part 1 of 4
+        </span>
+
+        <span
+            id="percentText"
+            class="text-xs sm:text-sm font-bold text-indigo-500">
+            25%
+        </span>
+
+    </div>
+
+    <div class="w-full bg-slate-200 h-4 rounded-full overflow-hidden border border-slate-300">
+
+        <div
+            id="progressBar"
+            class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500"
+            style="width:25%">
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ===================================================== -->
+<!-- PART 1 -->
+<!-- ===================================================== -->
+
+<section
+    id="section1"
+    class="section-card bg-white rounded-3xl p-5 sm:p-8 mb-6 card-shadow border-4 border-purple-200">
+
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+
+        <div class="flex items-center gap-3">
+
+            <span class="bg-purple-500 text-white font-bold px-3 py-1 rounded-xl">
+                Part 1
+            </span>
+
+            <h2 class="text-lg sm:text-xl font-bold">
+                Finger Write Numbers 1–10
+            </h2>
+
+        </div>
+
+        <span class="text-xs bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-lg">
+            Finger / Stylus Enabled
+        </span>
+
+    </div>
+
+    <p class="text-slate-600 mb-6 text-sm sm:text-base font-semibold">
+        Touch and trace each number inside the white box using your finger.
+    </p>
+
+    <div
+        id="drawingGrid"
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+    </div>
+
+    <div class="mt-8 flex justify-end">
+
+        <button
+            onclick="navToSection(2)"
+            class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-lg bounce-tap">
+            Next: Tap-to-Count ➔
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- ===================================================== -->
+<!-- PART 2 -->
+<!-- ===================================================== -->
+
+<section
+    id="section2"
+    class="section-card bg-white rounded-3xl p-5 sm:p-8 mb-6 card-shadow border-4 border-amber-200 hidden">
+
+    <div class="flex items-center gap-3 mb-4">
+
+        <span class="bg-amber-500 text-white font-bold px-3 py-1 rounded-xl">
+            Part 2
+        </span>
+
+        <h2 class="text-lg sm:text-xl font-bold">
+            Tap Each Object to Count
+        </h2>
+
+    </div>
+
+    <p class="text-slate-600 mb-6 text-sm sm:text-base font-semibold">
+        Touch each object to count it. Then choose the correct total.
+    </p>
+
+
+    <!-- DINOSAURS -->
+
+    <div class="bg-amber-50/60 border-2 border-amber-200 rounded-3xl p-4 sm:p-6 mb-8">
+
+        <div class="flex justify-between items-center mb-3">
+
+            <span class="font-bold text-amber-900">
+                Task A: How many dinosaurs?
+            </span>
+
+            <span class="bg-amber-200 text-amber-900 font-bold px-3 py-1 rounded-xl text-xs">
+                Counted:
+                <span id="count_a_val">0</span>
+            </span>
+
+        </div>
+
+        <div
+            id="grid_count_a"
+            class="flex flex-wrap justify-center gap-3 p-4 bg-white rounded-2xl border border-amber-200 mb-4 min-h-[140px] items-center">
+        </div>
+
+        <div class="text-center font-bold text-slate-700 text-sm mb-3">
+            Choose the total count:
+        </div>
+
+        <div class="flex justify-center gap-3 sm:gap-6">
+
+            <button onclick="selectChoice('count_a',10,this)"
+                class="opt-card bg-white border-4 border-amber-200 rounded-2xl px-6 py-3 text-2xl font-bold bounce-tap">
+                10
+            </button>
+
+            <button onclick="selectChoice('count_a',12,this)"
+                class="opt-card bg-white border-4 border-amber-200 rounded-2xl px-6 py-3 text-2xl font-bold bounce-tap">
+                12
+            </button>
+
+            <button onclick="selectChoice('count_a',15,this)"
+                class="opt-card bg-white border-4 border-amber-200 rounded-2xl px-6 py-3 text-2xl font-bold bounce-tap">
+                15
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- STARS -->
+
+    <div class="bg-amber-50/60 border-2 border-amber-200 rounded-3xl p-4 sm:p-6 mb-6">
+
+        <div class="flex justify-between items-center mb-3">
+
+            <span class="font-bold text-amber-900">
+                Task B: How many stars?
+            </span>
+
+            <span class="bg-amber-200 text-amber-900 font-bold px-3 py-1 rounded-xl text-xs">
+                Counted:
+                <span id="count_b_val">0</span>
+            </span>
+
+        </div>
+
+        <div
+            id="grid_count_b"
+            class="flex flex-wrap justify-center gap-3 p-4 bg-white rounded-2xl border border-amber-200 mb-4 min-h-[140px] items-center">
+        </div>
+
+        <div class="text-center font-bold text-slate-700 text-sm mb-3">
+            Choose the total count:
+        </div>
+
+        <div class="flex justify-center gap-3 sm:gap-6">
+
+            <button onclick="selectChoice('count_b',15,this)"
+                class="opt-card bg-white border-4 border-amber-200 rounded-2xl px-6 py-3 text-2xl font-bold bounce-tap">
+                15
+            </button>
+
+            <button onclick="selectChoice('count_b',17,this)"
+                class="opt-card bg-white border-4 border-amber-200 rounded-2xl px-6 py-3 text-2xl font-bold bounce-tap">
+                17
+            </button>
+
+            <button onclick="selectChoice('count_b',20,this)"
+                class="opt-card bg-white border-4 border-amber-200 rounded-2xl px-6 py-3 text-2xl font-bold bounce-tap">
+                20
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="mt-8 flex justify-between">
+
+        <button
+            onclick="navToSection(1)"
+            class="bg-slate-200 text-slate-700 font-bold text-lg px-6 py-3 rounded-2xl bounce-tap">
+            ⬅ Back
+        </button>
+
+        <button
+            onclick="navToSection(3)"
+            class="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-lg bounce-tap">
+            Next: Number Sequence ➔
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- ===================================================== -->
+<!-- PART 3 -->
+<!-- ===================================================== -->
+
+<section
+    id="section3"
+    class="section-card bg-white rounded-3xl p-5 sm:p-8 mb-6 card-shadow border-4 border-emerald-200 hidden">
+
+    <div class="flex items-center gap-3 mb-4">
+
+        <span class="bg-emerald-500 text-white font-bold px-3 py-1 rounded-xl">
+            Part 3
+        </span>
+
+        <h2 class="text-lg sm:text-xl font-bold">
+            Number Sequence
+        </h2>
+
+    </div>
+
+    <p class="text-slate-600 mb-6 font-semibold">
+        Tap the missing number to complete the sequence.
+    </p>
+
+
+    <!-- SEQUENCE 1 -->
+
+    <div class="bg-emerald-50/60 border-2 border-emerald-200 rounded-3xl p-4 sm:p-6 mb-6 text-center">
+
+        <div class="font-bold text-emerald-900 mb-4 text-left">
+            Missing Number #1
+        </div>
+
+        <div class="flex items-center justify-center gap-2 sm:gap-3 flex-wrap mb-6">
+
+            <span class="number-box">13</span>
+            <span class="arrow">➜</span>
+
+            <span class="number-box">14</span>
+            <span class="arrow">➜</span>
+
+            <span id="seq_box_1" class="missing-box">?</span>
+
+            <span class="arrow">➜</span>
+
+            <span class="number-box">16</span>
+
+        </div>
+
+        <div class="flex justify-center gap-4">
+
+            <button onclick="selectChoice('seq_1',12,this,'seq_box_1')"
+                class="opt-card green-option">
+                12
+            </button>
+
+            <button onclick="selectChoice('seq_1',15,this,'seq_box_1')"
+                class="opt-card green-option">
+                15
+            </button>
+
+            <button onclick="selectChoice('seq_1',17,this,'seq_box_1')"
+                class="opt-card green-option">
+                17
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- SEQUENCE 2 -->
+
+    <div class="bg-emerald-50/60 border-2 border-emerald-200 rounded-3xl p-4 sm:p-6 mb-6 text-center">
+
+        <div class="font-bold text-emerald-900 mb-4 text-left">
+            Missing Number #2
+        </div>
+
+        <div class="flex items-center justify-center gap-2 sm:gap-3 flex-wrap mb-6">
+
+            <span class="number-box">17</span>
+            <span class="arrow">➜</span>
+
+            <span class="number-box">18</span>
+            <span class="arrow">➜</span>
+
+            <span id="seq_box_2" class="missing-box">?</span>
+
+            <span class="arrow">➜</span>
+
+            <span class="number-box">20</span>
+
+        </div>
+
+        <div class="flex justify-center gap-4">
+
+            <button onclick="selectChoice('seq_2',16,this,'seq_box_2')"
+                class="opt-card green-option">
+                16
+            </button>
+
+            <button onclick="selectChoice('seq_2',19,this,'seq_box_2')"
+                class="opt-card green-option">
+                19
+            </button>
+
+            <button onclick="selectChoice('seq_2',21,this,'seq_box_2')"
+                class="opt-card green-option">
+                21
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="mt-8 flex justify-between">
+
+        <button
+            onclick="navToSection(2)"
+            class="bg-slate-200 text-slate-700 font-bold
